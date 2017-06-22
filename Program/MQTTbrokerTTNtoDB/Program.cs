@@ -13,15 +13,15 @@ using System.Threading.Tasks;
  * \section intro_sec Introduction
  *
  * On this doxygen page you will find the documentation of the program MQTTbrokerTTNtoDB.
- * 
- * This project is to get messages from <a href="https://www.thethingsnetwork.org/">The Things Network</a> 
+ *
+ * This project is to get messages from <a href="https://www.thethingsnetwork.org/">The Things Network</a>
  * and send it to the databases.
- * 
+ *
  * This program will subscribe to the MQTT broker of The Things Network. Every time a device sends a message to the
  * created application (on The Things Network) it will be recognized by the broker. Than the message will be unpacked and
- * data will be decoded. The data will then be send to the databases. 
+ * data will be decoded. The data will then be send to the databases.
  *
- * 
+ *
  * \author Name: Maurice Markvoort <br />
  *         Email: m.markvoort@xablu.com <br />
  *         Company: <a href="https://www.xablu.com/">Xablu</a>
@@ -45,25 +45,15 @@ namespace MQTTbrokerTTNtoDB
         private static ManageDB manageDB;
 
         /// <summary>
-        /// Variable that manage MySql database.
-        /// </summary>
-        private static MySqlConnection connection;
-
-        /// <summary>
         /// This function is the start of the program.
         /// It will create connections to the database.
         /// After that it will connect to the mqtt broker of The Things Network.
         /// Once connected it will subscribe to an event.
-        /// 
+        ///
         /// Every time data is uploaded to The Things Network, to this application-id, that data is send to de databases.
         /// </summary>
         private static void Main(string[] args)
         {
-            connection = new MySqlConnection
-            {
-                ConnectionString = "[User database]"
-            };
-            connection.Open();
             var cultureInfo = new CultureInfo("en-US");
 
             CultureInfo.DefaultThreadCurrentCulture = cultureInfo;
@@ -93,7 +83,7 @@ namespace MQTTbrokerTTNtoDB
             {
                 Console.WriteLine(string.Format("Exception main: {0}", ex.Message));
             }
-            
+
         }
 
         /// <summary>
@@ -158,17 +148,25 @@ namespace MQTTbrokerTTNtoDB
         /// <returns>id of the device within the database.</returns>
         private static async Task<uint> getDeviceId(string macAddress)
         {
-            var cmd = connection.CreateCommand() as MySqlCommand;
-            cmd.CommandText = @"SELECT id FROM devices WHERE mac = '" + macAddress + "'";
-            DbDataReader reader = await cmd.ExecuteReaderAsync();
-            using (reader)
+            using (var connection = new MySqlConnection("[User database]"))
             {
-                while (await reader.ReadAsync())
-                {
-                    return await reader.GetFieldValueAsync<uint>(0);
-                }
-            }
-            return 0;
+              uint returnvalue = 0;
+              var cmd = connection.CreateCommand() as MySqlCommand;
+              cmd.CommandText = @"SELECT id FROM devices WHERE mac = '" + macAddress + "'";
+              connection.Open();
+              Console.WriteLine(connection.State);
+
+              DbDataReader reader = await cmd.ExecuteReaderAsync();
+              using (reader)
+              {
+                  while (await reader.ReadAsync())
+                  {
+                      returnvalue = await reader.GetFieldValueAsync<uint>(0);
+                  }
+              }
+              reader.Dispose();
+              cmd.Dispose();
+              return returnvalue;
         }
 
 
